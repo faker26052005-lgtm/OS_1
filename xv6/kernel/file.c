@@ -180,3 +180,21 @@ filewrite(struct file *f, uint64 addr, int n)
   return ret;
 }
 
+//count amount of file that is opening in system
+uint64
+get_nopenfiles(void)
+{
+    struct file *f;
+    uint64 count = 0;
+
+    acquire(&ftable.lock);
+    for(f = ftable.file; f < &ftable.file[NFILE]; f++)
+    {
+        if(f->ref > 0)
+          ++count;
+    }
+    release(&ftable.lock);
+
+    return count;
+}
+

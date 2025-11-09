@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -90,4 +91,41 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+//implement system call sys_trace
+uint64
+sys_trace(void)
+{
+  int mask;
+  argint(0, &mask);
+  myproc()->mask = mask;
+  return 0;
+}
+
+//declare functions to collect required info that are implemented in 
+extern uint64 get_freemem(void); //
+extern uint64 get_nproc(void); //proc.c
+extern uint64 get_nopenfiles(void); //file.c
+
+//implement system call sys_sysinfo
+uint64
+sys_sysinfo(void)
+{
+    uint64 address;
+    struct sysinfo _sysinfo;
+
+    //get address of sysinfo struct pointer from user space
+    argaddr(0, &address);
+
+    //get requried info
+    _sysinfo.freemem = get_freemem();
+    _sysinfo.nproc = get_nproc();
+    _sysinfo.nopenfiles = get_nopenfiles();
+
+    //copy sysinfo struct that contains required info to User space at address 
+    if(copyout(myproc()->pagetable, address, (char*)&_sysinfo, sizeof(_sysinfo)) < 0)
+      return (uint64)-1;
+
+    return 0;
 }
