@@ -449,3 +449,51 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+//helper method for recursion and format result processing
+void
+vmprint_walk(pagetable_t pagetable, int level)
+{
+  for(int i = 0; i < 512; i++)
+  {
+    pte_t pte = pagetable[i];
+
+    //check if PTE is valid (bit PTE_V)
+    if(pte & PTE_V)
+    {
+      //print .. base on level
+      //Level 2: ..
+      //Level 1: .. .. 
+      //Level 0: .. .. .. 
+      //Format: "..<Index>: pte <Hex> pa <Hex>"
+      for(int j=0;j <= (2-level); j++)
+      {
+        printf("..");
+        if(j < (2-level))
+        {
+          printf(" ");
+        }
+      }
+
+      //get physical address from PTE by macro PTE2PA
+      uint64 pa = PTE2PA(pte);
+      printf("%d: pte %p pa %p\n", i, (void*)pte, (void*)pa);
+
+      //if it is not a leaf (level > 0) and PTE point to lower level pagetable
+      //PTE_R/W/X == 0 means it is a directory, not a leaf
+      if(level > 0)
+      {
+        pagetable_t child = (pagetable_t)pa;
+        vmprint_walk(child, level-1);
+      }
+    }
+  }
+}
+
+//main method that is called by extern
+void 
+vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  vmprint_walk(pagetable, 2);
+}
