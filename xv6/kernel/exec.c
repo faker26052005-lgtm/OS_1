@@ -130,9 +130,10 @@ exec(char *path, char **argv)
 
   //print page table when user want to do
   //this means page table is printed if pid == 1 (first proc)
-  if(p->pid == 1)
+  if(p->trace_pgtbl == 1)
   {
     vmprint(p->pagetable);
+    p->trace_pgtbl = 0;
   }
 
   return argc; // this ends up in a0, the first argument to main(argc, argv)
