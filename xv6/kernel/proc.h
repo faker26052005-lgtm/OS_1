@@ -105,4 +105,5 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   int mask;
+  int trace_pgtbl;              //flag: 1 = print page table in exec ; 0 = no print
 };
