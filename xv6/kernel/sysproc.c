@@ -129,3 +129,43 @@ sys_sysinfo(void)
 
     return 0;
 }
+uint64
+sys_pgaccess(void)
+{
+  uint64 va;      // Địa chỉ ảo bắt đầu
+  int num_pages;  // Số lượng trang cần kiểm tra
+  uint64 user_abitsaddr; // Địa chỉ buffer bitmask ở user space
+  
+  // 1. Lấy các đối số từ system call
+  argaddr(0, &va);
+  argint(1, &num_pages);
+  argaddr(2, &user_abitsaddr);
+
+  // Giới hạn số lượng trang để tránh tràn buffer (tối đa 64 trang cho uint64)
+  if(num_pages > 64) return -1;
+
+  struct proc *p = myproc();
+  uint64 bitmask = 0;
+
+  // 2. Lặp qua từng trang
+  for(int i = 0; i < num_pages; i++){
+    uint64 current_va = va + i * PGSIZE;
+    
+    // Sử dụng hàm walk() từ vm.c để tìm PTE
+    pte_t *pte = walk(p->pagetable, current_va, 0);
+    
+    if(pte != 0 && (*pte & PTE_V) && (*pte & PTE_A)){
+      // Nếu trang tồn tại, hợp lệ và đã được truy cập
+      bitmask |= (1L << i);
+      
+      // QUAN TRỌNG: Xóa bit A sau khi kiểm tra để lần sau nhận diện chính xác
+      *pte &= ~PTE_A;
+    }
+  }
+
+  // 3. Copy kết quả bitmask về user space
+  if(copyout(p->pagetable, user_abitsaddr, (char *)&bitmask, sizeof(bitmask)) < 0)
+    return -1;
+
+  return 0;
+}
